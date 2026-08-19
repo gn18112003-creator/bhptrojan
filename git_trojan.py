@@ -68,8 +68,8 @@ class GitImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return None
 
     def exec_module(self, module):
-        code = self.module_codes.get(module.name_, b"")
-        exec(compile(code, f'<github:{module._name}>', 'exec'), module.dict_)
+        code = self._module_codes.get(module.name_, b"")
+        exec(compile(code, f'<github:{module.__name__}>', 'exec'), module.__dict__)
 
 if __name__ == '__main__':
     sys.meta_path.append(GitImporter())
